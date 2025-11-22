@@ -8,6 +8,24 @@ import sys
 import uvicorn
 from pathlib import Path
 
+# 尝试加载 app/config.json (优先级高于 .env，但低于系统环境变量)
+try:
+    import json
+    config_json_path = Path(__file__).parent / "app" / "config.json"
+    if config_json_path.exists():
+        print(f"📄 加载配置文件: {config_json_path}")
+        with open(config_json_path, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+            for key, value in config_data.items():
+                if key and not os.environ.get(key): # 只有未设置时才设置
+                    if isinstance(value, bool):
+                        os.environ[key] = "true" if value else "false"
+                    else:
+                        os.environ[key] = str(value)
+        print("✓ 配置文件加载完成\n")
+except Exception as e:
+    print(f"⚠️  加载配置文件失败: {e}\n")
+
 # 尝试加载 dotenv
 try:
     from dotenv import load_dotenv

@@ -30,6 +30,7 @@ router = APIRouter()
 async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api_key: str = Depends(get_api_key)):
     try:
         credential_manager_instance = fastapi_request.app.state.credential_manager
+        location_manager_instance = fastapi_request.app.state.location_manager
         OPENAI_DIRECT_SUFFIX = "-openai"
         OPENAI_SEARCH_SUFFIX = "-openaisearch"
         EXPERIMENTAL_MARKER = "-exp-"
@@ -133,20 +134,21 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
                 if key_tuple:
                     original_idx, key_val = key_tuple
                     try:
-                        # Check if model contains "gemini-2.5-pro" or "gemini-2.5-flash" for direct URL approach
-                        if "gemini-2.5-pro" in base_model_name or "gemini-2.5-flash" in base_model_name:
-                            project_id = await discover_project_id(key_val)
-                            base_url = f"https://aiplatform.googleapis.com/v1/projects/{project_id}/locations/global"
-                            client_to_use = genai.Client(
-                                vertexai=True,
-                                api_key=key_val,
-                                http_options=types.HttpOptions(base_url=base_url)
-                            )
-                            client_to_use._api_client._http_options.api_version = None
-                            print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode with custom base URL for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
-                        else:
-                            client_to_use = genai.Client(vertexai=True, api_key=key_val)
-                            print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode SDK for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
+                        # Always use direct URL approach for Express Mode to avoid local ADC issues
+                        # and to support dynamic location switching
+                        project_id = await discover_project_id(key_val)
+                        current_location = location_manager_instance.get_current_location()
+                        base_url = f"https://aiplatform.googleapis.com/v1/projects/{project_id}/locations/{current_location}"
+                        
+                        client_to_use = genai.Client(
+                            vertexai=True,
+                            api_key=key_val,
+                            http_options=types.HttpOptions(base_url=base_url)
+                        )
+                        # Ensure API version is handled correctly (often needed for custom base_url)
+                        client_to_use._api_client._http_options.api_version = None
+                        
+                        print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode with custom base URL for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
                         break # Successfully initialized client
                     except Exception as e:
                         print(f"WARNING: Attempt {attempt+1}/{total_keys} - voutb Express Mode client init failed for API key (original index: {original_idx}) for model {request.model}: {e}. Trying next key.")
@@ -168,8 +170,9 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
             
             if rotated_credentials and rotated_project_id:
                 try:
-                    client_to_use = genai.Client(vertexai=True, credentials=rotated_credentials, project=rotated_project_id, location="global")
-                    print(f"INFO: Using SA credential for Gemini model {request.model} (project: {rotated_project_id})")
+                    current_location = location_manager_instance.get_current_location()
+                    client_to_use = genai.Client(vertexai=True, credentials=rotated_credentials, project=rotated_project_id, location=current_location)
+                    print(f"INFO: Using SA credential for Gemini model {request.model} (project: {rotated_project_id}, location: {current_location})")
                 except Exception as e:
                     client_to_use = None # Ensure it's None on failure
                     error_msg = f"SA credential client initialization failed for Gemini model '{request.model}': {e}."
@@ -279,9 +282,27 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
                 if budget == 0:
                     gen_config_dict["thinking_config"]["include_thoughts"] = False
 
-            return await execute_gemini_call(client_to_use, base_model_name, current_prompt_func, gen_config_dict, request)
+            try:
+                response = await execute_gemini_call(client_to_use, base_model_name, current_prompt_func, gen_config_dict, request)
+                location_manager_instance.report_success()
+                return response
+            except Exception as e_call:
+                # Check for 429 in the exception
+                # The execute_gemini_call might raise different types of exceptions depending on streaming or not
+                # and the underlying library. We need to inspect the error message or type if possible.
+                # Since we don't have the exact exception structure for 429s handy from the snippets,
+                # we'll look for "429" or "ResourceExhausted" in the string representation.
+                err_str = str(e_call)
+                if "429" in err_str or "ResourceExhausted" in err_str:
+                    location_manager_instance.report_error(429)
+                raise e_call
 
     except Exception as e:
         error_msg = f"Unexpected error in chat_completions endpoint: {str(e)}"
+        # Double check if the top-level exception catcher caught a 429 re-raised
+        if "429" in str(e) or "ResourceExhausted" in str(e):
+             if 'location_manager_instance' in locals():
+                 location_manager_instance.report_error(429)
+
         print(error_msg)
         return JSONResponse(status_code=500, content=create_openai_error_response(500, error_msg, "server_error"))

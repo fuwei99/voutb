@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from auth import get_api_key # Potentially for root endpoint
 from credentials_manager import CredentialManager
 from express_key_manager import ExpressKeyManager
+from location_manager import LocationManager
 from vertex_ai_init import init_vertex_ai
 
 # Routers
@@ -26,6 +27,9 @@ app.state.credential_manager = credential_manager # Store manager on app state
 
 express_key_manager = ExpressKeyManager()
 app.state.express_key_manager = express_key_manager # Store express key manager on app state
+
+location_manager = LocationManager()
+app.state.location_manager = location_manager # Store location manager on app state
 
 # Include API routers
 app.include_router(models_api.router) 

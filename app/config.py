@@ -76,3 +76,8 @@ R2_ACCESS_KEY_ID = get_conf("R2_ACCESS_KEY_ID", "")
 R2_SECRET_ACCESS_KEY = get_conf("R2_SECRET_ACCESS_KEY", "")
 R2_BUCKET_NAME = get_conf("R2_BUCKET_NAME", "")
 R2_PUBLIC_URL = get_conf("R2_PUBLIC_URL", "")  # e.g., https://your-bucket.r2.dev
+
+# Location Switching Settings
+AUTO_SWITCH_LOCATION = get_conf("AUTO_SWITCH_LOCATION", "true").lower() == "true"
+MAX_RETRIES_BEFORE_SWITCH = int(get_conf("MAX_RETRIES_BEFORE_SWITCH", "1"))
+DEFAULT_LOCATION = get_conf("DEFAULT_LOCATION", "asia-southeast1")
