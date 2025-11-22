@@ -134,21 +134,21 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
                 if key_tuple:
                     original_idx, key_val = key_tuple
                     try:
-                        # Always use direct URL approach for Express Mode to avoid local ADC issues
-                        # and to support dynamic location switching
-                        project_id = await discover_project_id(key_val)
-                        current_location = location_manager_instance.get_current_location()
-                        base_url = f"https://aiplatform.googleapis.com/v1/projects/{project_id}/locations/{current_location}"
-                        
-                        client_to_use = genai.Client(
-                            vertexai=True,
-                            api_key=key_val,
-                            http_options=types.HttpOptions(base_url=base_url)
-                        )
-                        # Ensure API version is handled correctly (often needed for custom base_url)
-                        client_to_use._api_client._http_options.api_version = None
-                        
-                        print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode with custom base URL for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
+                        # Check if model contains "gemini-2.5-pro" or "gemini-2.5-flash" for direct URL approach
+                        if "gemini-2.5-pro" in base_model_name or "gemini-2.5-flash" in base_model_name:
+                            project_id = await discover_project_id(key_val)
+                            current_location = location_manager_instance.get_current_location()
+                            base_url = f"https://aiplatform.googleapis.com/v1/projects/{project_id}/locations/{current_location}"
+                            client_to_use = genai.Client(
+                                vertexai=True,
+                                api_key=key_val,
+                                http_options=types.HttpOptions(base_url=base_url)
+                            )
+                            client_to_use._api_client._http_options.api_version = None
+                            print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode with custom base URL for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
+                        else:
+                            client_to_use = genai.Client(vertexai=True, api_key=key_val)
+                            print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode SDK for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
                         break # Successfully initialized client
                     except Exception as e:
                         print(f"WARNING: Attempt {attempt+1}/{total_keys} - voutb Express Mode client init failed for API key (original index: {original_idx}) for model {request.model}: {e}. Trying next key.")
