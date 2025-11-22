@@ -36,20 +36,20 @@ async def init_vertex_ai(credential_manager_instance: CredentialManager) -> bool
         env_creds_loaded_into_manager = False
 
         if credentials_json_str:
-            print("INFO: Found GOOGLE_CREDENTIALS_JSON environment variable. Attempting to load into CredentialManager.")
+            print("INFO: Found GULUGULU_CREDENTIALS_JSON environment variable. Attempting to load into CredentialManager.")
             try:
                 # Attempt 1: Parse as multiple JSON objects
                 json_objects = parse_multiple_json_credentials(credentials_json_str)
                 if json_objects:
-                    print(f"DEBUG: Parsed {len(json_objects)} potential credential objects from GOOGLE_CREDENTIALS_JSON.")
+                    print(f"DEBUG: Parsed {len(json_objects)} potential credential objects from GULUGULU_CREDENTIALS_JSON.")
                     success_count = credential_manager_instance.load_credentials_from_json_list(json_objects)
                     if success_count > 0:
-                        print(f"INFO: Successfully loaded {success_count} credentials from GOOGLE_CREDENTIALS_JSON into manager.")
+                        print(f"INFO: Successfully loaded {success_count} credentials from GULUGULU_CREDENTIALS_JSON into manager.")
                         env_creds_loaded_into_manager = True
                 
                 # Attempt 2: If multiple parsing/loading didn't add any, try parsing/loading as a single JSON object
                 if not env_creds_loaded_into_manager:
-                    print("DEBUG: Multi-JSON loading from GOOGLE_CREDENTIALS_JSON did not add to manager or was empty. Attempting single JSON load.")
+                    print("DEBUG: Multi-JSON loading from GULUGULU_CREDENTIALS_JSON did not add to manager or was empty. Attempting single JSON load.")
                     try:
                         credentials_info = json.loads(credentials_json_str)
                         # Basic validation (CredentialManager's add_credential_from_json does more thorough validation)
@@ -57,21 +57,21 @@ async def init_vertex_ai(credential_manager_instance: CredentialManager) -> bool
                         if isinstance(credentials_info, dict) and \
                            all(field in credentials_info for field in ["type", "project_id", "private_key_id", "private_key", "client_email"]):
                             if credential_manager_instance.add_credential_from_json(credentials_info):
-                                print("INFO: Successfully loaded single credential from GOOGLE_CREDENTIALS_JSON into manager.")
+                                print("INFO: Successfully loaded single credential from GULUGULU_CREDENTIALS_JSON into manager.")
                                 # env_creds_loaded_into_manager = True # Redundant, as this block is conditional on it being False
                             else:
-                                print("WARNING: Single JSON from GOOGLE_CREDENTIALS_JSON failed to load into manager via add_credential_from_json.")
+                                print("WARNING: Single JSON from GULUGULU_CREDENTIALS_JSON failed to load into manager via add_credential_from_json.")
                         else:
-                             print("WARNING: Single JSON from GOOGLE_CREDENTIALS_JSON is not a valid dict or missing required fields for basic check.")
+                             print("WARNING: Single JSON from GULUGULU_CREDENTIALS_JSON is not a valid dict or missing required fields for basic check.")
                     except json.JSONDecodeError as single_json_err:
-                        print(f"WARNING: GOOGLE_CREDENTIALS_JSON could not be parsed as a single JSON object: {single_json_err}.")
+                        print(f"WARNING: GULUGULU_CREDENTIALS_JSON could not be parsed as a single JSON object: {single_json_err}.")
                     except Exception as single_load_err:
-                        print(f"WARNING: Error trying to load single JSON from GOOGLE_CREDENTIALS_JSON into manager: {single_load_err}.")
+                        print(f"WARNING: Error trying to load single JSON from GULUGULU_CREDENTIALS_JSON into manager: {single_load_err}.")
             except Exception as e_json_env:
                 # This catches errors from parse_multiple_json_credentials or load_credentials_from_json_list
-                print(f"WARNING: Error processing GOOGLE_CREDENTIALS_JSON env var: {e_json_env}.")
+                print(f"WARNING: Error processing GULUGULU_CREDENTIALS_JSON env var: {e_json_env}.")
         else:
-            print("INFO: GOOGLE_CREDENTIALS_JSON environment variable not found.")
+            print("INFO: GULUGULU_CREDENTIALS_JSON environment variable not found.")
 
         # Attempt to pre-warm the model configuration cache
         print("INFO: Attempting to pre-warm model configuration cache during startup...")
@@ -88,7 +88,7 @@ async def init_vertex_ai(credential_manager_instance: CredentialManager) -> bool
         # The return value of refresh_credentials_list indicates if total > 0
         if credential_manager_instance.refresh_credentials_list():
             total_creds = credential_manager_instance.get_total_credentials()
-            print(f"INFO: Credential Manager reports {total_creds} credential(s) available (from files and/or GOOGLE_CREDENTIALS_JSON).")
+            print(f"INFO: Credential Manager reports {total_creds} credential(s) available (from files and/or GULUGULU_CREDENTIALS_JSON).")
             
             # Optional: Attempt to validate one of the credentials by creating a temporary client.
             # This adds a check that at least one credential is functional.
@@ -119,5 +119,5 @@ async def init_vertex_ai(credential_manager_instance: CredentialManager) -> bool
             return False
 
     except Exception as e:
-        print(f"CRITICAL ERROR during Vertex AI credential setup: {e}")
+        print(f"CRITICAL ERROR during voutb AI credential setup: {e}")
         return False

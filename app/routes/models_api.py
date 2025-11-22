@@ -86,7 +86,7 @@ async def list_models(fastapi_request: Request, api_key: str = Depends(get_api_k
                     "id": final_id,
                     "object": "model",
                     "created": current_time,
-                    "owned_by": "google",
+                    "owned_by": "gulugulu",
                     "permission": [],
                     "root": base_id,
                     "parent": None,

@@ -124,7 +124,7 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
                 print(f"ERROR: {error_msg}")
                 return JSONResponse(status_code=401, content=create_openai_error_response(401, error_msg, "authentication_error"))
 
-            print(f"INFO: Attempting Vertex Express Mode for model request: {request.model} (base: {base_model_name})")
+            print(f"INFO: Attempting voutb Express Mode for model request: {request.model} (base: {base_model_name})")
             
             # Use the ExpressKeyManager to get keys and handle retries
             total_keys = express_key_manager_instance.get_total_keys()
@@ -143,13 +143,13 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
                                 http_options=types.HttpOptions(base_url=base_url)
                             )
                             client_to_use._api_client._http_options.api_version = None
-                            print(f"INFO: Attempt {attempt+1}/{total_keys} - Using Vertex Express Mode with custom base URL for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
+                            print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode with custom base URL for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
                         else:
                             client_to_use = genai.Client(vertexai=True, api_key=key_val)
-                            print(f"INFO: Attempt {attempt+1}/{total_keys} - Using Vertex Express Mode SDK for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
+                            print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode SDK for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
                         break # Successfully initialized client
                     except Exception as e:
-                        print(f"WARNING: Attempt {attempt+1}/{total_keys} - Vertex Express Mode client init failed for API key (original index: {original_idx}) for model {request.model}: {e}. Trying next key.")
+                        print(f"WARNING: Attempt {attempt+1}/{total_keys} - voutb Express Mode client init failed for API key (original index: {original_idx}) for model {request.model}: {e}. Trying next key.")
                         client_to_use = None # Ensure client_to_use is None for this attempt
                 else:
                     # Should not happen if total_keys > 0, but adding a safeguard
