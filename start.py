@@ -54,6 +54,9 @@ except ImportError:
 app_dir = Path(__file__).parent / "app"
 sys.path.insert(0, str(app_dir))
 
+# Import app.config after setting sys.path
+import app.config as app_config
+
 def check_environment():
     """检查必需的环境变量"""
     print("=" * 60)
@@ -61,27 +64,27 @@ def check_environment():
     print("=" * 60)
     
     # 检查API_KEY
-    api_key = os.environ.get("API_KEY")
-    if not api_key:
-        print("⚠️  警告: API_KEY 未设置，将使用默认值 '123456'")
+    api_key = app_config.API_KEY
+    if not api_key or api_key == "123456":
+        print("⚠️  警告: API_KEY 未设置或为默认值 '123456'")
     else:
         print(f"✓ API_KEY: {'*' * len(api_key)}")
     
     # 检查认证方式
     auth_methods = []
     
-    vertex_key = os.environ.get("VERTEX_EXPRESS_API_KEY")
-    if vertex_key:
-        keys = [k.strip() for k in vertex_key.split(',') if k.strip()]
-        auth_methods.append(f"Vertex Express API Key ({len(keys)}个)")
-        print(f"✓ VERTEX_EXPRESS_API_KEY: {len(keys)}个密钥")
+    # Use values from app_config which handles config.json + env vars
+    vertex_keys = app_config.VERTEX_EXPRESS_API_KEY_VAL
+    if vertex_keys:
+        auth_methods.append(f"Vertex Express API Key ({len(vertex_keys)}个)")
+        print(f"✓ VERTEX_EXPRESS_API_KEY: {len(vertex_keys)}个密钥")
     
-    google_creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    google_creds_json = app_config.GOOGLE_CREDENTIALS_JSON_STR
     if google_creds_json:
         auth_methods.append("Google服务账号JSON")
         print("✓ GOOGLE_CREDENTIALS_JSON: 已设置")
     
-    creds_dir = os.environ.get("CREDENTIALS_DIR", "/app/credentials")
+    creds_dir = app_config.CREDENTIALS_DIR
     creds_path = Path(creds_dir)
     if creds_path.exists():
         json_files = list(creds_path.glob("*.json"))
@@ -102,9 +105,15 @@ def check_environment():
     
     # 显示可选配置
     print("\n可选配置:")
-    roundrobin = os.environ.get("ROUNDROBIN", "false")
+    roundrobin = str(app_config.ROUNDROBIN).lower()
     print(f"  - 轮询模式: {roundrobin}")
     
+    # Location switching config
+    if hasattr(app_config, 'AUTO_SWITCH_LOCATION'):
+        print(f"  - 自动切换区域: {app_config.AUTO_SWITCH_LOCATION}")
+        print(f"  - 切换阈值(429次数): {app_config.MAX_RETRIES_BEFORE_SWITCH}")
+        print(f"  - 默认区域: {app_config.DEFAULT_LOCATION}")
+
     gcp_project = os.environ.get("GCP_PROJECT_ID")
     if gcp_project:
         print(f"  - GCP项目ID: {gcp_project}")
