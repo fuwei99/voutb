@@ -38,7 +38,7 @@ app.include_router(chat_api.router)
 @app.on_event("startup")
 async def startup_event():
     # Check SA credentials availability
-    sa_credentials_available = await init_vertex_ai(credential_manager)
+    sa_credentials_available = await init_vertex_ai(credential_manager, location_manager)
     sa_count = credential_manager.get_total_credentials() if sa_credentials_available else 0
     
     # Check Express API keys availability

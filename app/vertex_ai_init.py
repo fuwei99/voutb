@@ -2,6 +2,7 @@ import json
 from typing import Optional
 from google import genai
 from credentials_manager import CredentialManager, parse_multiple_json_credentials
+from location_manager import LocationManager
 import config as app_config
 from google.genai import types
 from model_loader import refresh_models_config_cache # Import new model loader function
@@ -22,7 +23,7 @@ def _get_http_options() -> Optional[types.HttpOptions]:
     return None
 
 
-async def init_vertex_ai(credential_manager_instance: CredentialManager) -> bool: # Made async
+async def init_vertex_ai(credential_manager_instance: CredentialManager, location_manager_instance: Optional[LocationManager] = None) -> bool: # Made async
     """
     Initializes the credential manager with credentials from GOOGLE_CREDENTIALS_JSON (if provided)
     and verifies if any credentials (environment or file-based through the manager) are available.
@@ -97,11 +98,12 @@ async def init_vertex_ai(credential_manager_instance: CredentialManager) -> bool
             if temp_creds_val and temp_project_id_val:
                 try:
                     http_options = _get_http_options()
+                    current_loc = location_manager_instance.get_current_location() if location_manager_instance else "global"
                     if http_options:
-                        _ = genai.Client(vertexai=True, credentials=temp_creds_val, project=temp_project_id_val, location="global", http_options=http_options)
+                        _ = genai.Client(vertexai=True, credentials=temp_creds_val, project=temp_project_id_val, location=current_loc, http_options=http_options)
                     else:
-                        _ = genai.Client(vertexai=True, credentials=temp_creds_val, project=temp_project_id_val, location="global")
-                    print(f"INFO: Successfully validated a credential from Credential Manager (Project: {temp_project_id_val}). Initialization check passed.")
+                        _ = genai.Client(vertexai=True, credentials=temp_creds_val, project=temp_project_id_val, location=current_loc)
+                    print(f"INFO: Successfully validated a credential from Credential Manager (Project: {temp_project_id_val}, Location: {current_loc}). Initialization check passed.")
                     return True
                 except Exception as e_val:
                     print(f"WARNING: Failed to validate a random credential from manager by creating a temp client: {e_val}. App may rely on non-validated credentials.")
