@@ -486,7 +486,7 @@ async def execute_gemini_call(
                                         "object": "chat.completion.chunk",
                                         "created": int(time.time()),
                                         "model": request_obj.model,
-                                        "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": None}]
+                                        "choices": [{"index": 0, "delta": {"reasoning_content": " "}, "finish_reason": None}]
                                     }
                                     yield f"data: {json.dumps(keep_alive_chunk, ensure_ascii=False)}\n\n"
                         finally:
