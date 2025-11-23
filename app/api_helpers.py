@@ -445,8 +445,53 @@ async def execute_gemini_call(
                         contents=actual_prompt_for_call,
                         config=gen_config_dict # Pass the dictionary directly
                     )
-                    async for chunk_item_call in stream_gen_obj:
-                        yield convert_chunk_to_openai(chunk_item_call, request_obj.model, response_id_for_stream, 0)
+                    
+                    if "image" not in request_obj.model:
+                        async for chunk_item_call in stream_gen_obj:
+                            yield convert_chunk_to_openai(chunk_item_call, request_obj.model, response_id_for_stream, 0)
+                    else:
+                        # For image models, use a queue to handle keep-alive timeouts
+                        queue = asyncio.Queue()
+                        
+                        async def producer():
+                            try:
+                                async for item in stream_gen_obj:
+                                    await queue.put(item)
+                            except Exception as e:
+                                await queue.put(e)
+                            finally:
+                                await queue.put(None) # Sentinel
+
+                        producer_task = asyncio.create_task(producer())
+                        
+                        try:
+                            while True:
+                                try:
+                                    # Wait for next item with timeout
+                                    item = await asyncio.wait_for(queue.get(), timeout=5.0)
+                                    
+                                    if item is None: # Sentinel
+                                        break
+                                    
+                                    if isinstance(item, Exception):
+                                        raise item
+                                        
+                                    yield convert_chunk_to_openai(item, request_obj.model, response_id_for_stream, 0)
+                                    
+                                except asyncio.TimeoutError:
+                                    # Send keep-alive space
+                                    print(f"DEBUG: Sending keep-alive space for model '{request_obj.model}'")
+                                    keep_alive_chunk = {
+                                        "id": response_id_for_stream,
+                                        "object": "chat.completion.chunk",
+                                        "created": int(time.time()),
+                                        "model": request_obj.model,
+                                        "choices": [{"index": 0, "delta": {"content": " "}, "finish_reason": None}]
+                                    }
+                                    yield f"data: {json.dumps(keep_alive_chunk, ensure_ascii=False)}\n\n"
+                        finally:
+                            producer_task.cancel()
+
                     yield "data: [DONE]\n\n"
                 except Exception as e_stream_call:
                     err_str = str(e_stream_call)

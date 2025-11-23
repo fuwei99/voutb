@@ -54,14 +54,14 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
                temp_name_for_marker_check.startswith(EXPRESS_PREFIX) or \
                EXPERIMENTAL_MARKER in temp_name_for_marker_check:
                 is_openai_direct_model = True
-        is_auto_model = request.model.endswith("-auto")
-        is_grounded_search = request.model.endswith("-search")
-        is_encrypted_model = request.model.endswith("-encrypt")
-        is_encrypted_full_model = request.model.endswith("-encrypt-full")
-        is_nothinking_model = request.model.endswith("-nothinking")
-        is_max_thinking_model = request.model.endswith("-max")
-        is_2k_image_model = request.model.endswith("-2k")
-        is_4k_image_model = request.model.endswith("-4k")
+        is_auto_model = False
+        is_grounded_search = False
+        is_encrypted_model = False
+        is_encrypted_full_model = False
+        is_nothinking_model = False
+        is_max_thinking_model = False
+        is_2k_image_model = False
+        is_4k_image_model = False
         base_model_name = request.model # Start with the full model name
 
         # Determine base_model_name by stripping known prefixes and suffixes
@@ -76,7 +76,6 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
             base_model_name = base_model_name[len(PAY_PREFIX):]
 
         # Suffix stripping (applied to the name after prefix removal)
-        # This order matters if a model could have multiple (e.g. -encrypt-auto, though not currently a pattern)
         if is_openai_direct_model: # This check is based on request.model, so it's fine here
             # If it was an OpenAI direct model, its base name is request.model minus suffix.
             # We need to ensure PAY_PREFIX or EXPRESS_PREFIX are also stripped if they were part of the original.
@@ -87,14 +86,35 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
             if temp_base_for_openai.startswith(PAY_PREFIX):
                 temp_base_for_openai = temp_base_for_openai[len(PAY_PREFIX):]
             base_model_name = temp_base_for_openai # Assign the fully stripped name
-        elif is_auto_model: base_model_name = base_model_name[:-len("-auto")]
-        elif is_grounded_search: base_model_name = base_model_name[:-len("-search")]
-        elif is_encrypted_full_model: base_model_name = base_model_name[:-len("-encrypt-full")] # Must be before -encrypt
-        elif is_encrypted_model: base_model_name = base_model_name[:-len("-encrypt")]
-        elif is_nothinking_model: base_model_name = base_model_name[:-len("-nothinking")]
-        elif is_max_thinking_model: base_model_name = base_model_name[:-len("-max")]
-        elif is_2k_image_model: base_model_name = base_model_name[:-len("-2k")]
-        elif is_4k_image_model: base_model_name = base_model_name[:-len("-4k")]
+        else:
+            # Iterative stripping for Gemini suffixes to allow combinations like -2k-auto
+            while True:
+                if base_model_name.endswith("-auto"):
+                    is_auto_model = True
+                    base_model_name = base_model_name[:-5]
+                elif base_model_name.endswith("-search"):
+                    is_grounded_search = True
+                    base_model_name = base_model_name[:-7]
+                elif base_model_name.endswith("-encrypt-full"):
+                    is_encrypted_full_model = True
+                    base_model_name = base_model_name[:-13]
+                elif base_model_name.endswith("-encrypt"):
+                    is_encrypted_model = True
+                    base_model_name = base_model_name[:-8]
+                elif base_model_name.endswith("-nothinking"):
+                    is_nothinking_model = True
+                    base_model_name = base_model_name[:-11]
+                elif base_model_name.endswith("-max"):
+                    is_max_thinking_model = True
+                    base_model_name = base_model_name[:-4]
+                elif base_model_name.endswith("-2k"):
+                    is_2k_image_model = True
+                    base_model_name = base_model_name[:-3]
+                elif base_model_name.endswith("-4k"):
+                    is_4k_image_model = True
+                    base_model_name = base_model_name[:-3]
+                else:
+                    break # No known suffix found
         
         # # Specific model variant checks (if any remain exclusive and not covered dynamically)
         # if is_nothinking_model and not (base_model_name.startswith("gemini-2.5-flash") or base_model_name == "gemini-2.5-pro-preview-06-05"):
