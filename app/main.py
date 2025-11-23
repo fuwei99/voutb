@@ -1,5 +1,22 @@
 from fastapi import FastAPI, Depends # Depends might be used by root endpoint
 from fastapi.middleware.cors import CORSMiddleware
+import aiohttp
+
+# Monkey patch aiohttp.streams.StreamReader to increase the limit for large lines (e.g. base64 images)
+# The default limit is 64KB, which is too small for 4K image base64 strings.
+# We intercept the __init__ method to force a larger limit.
+if hasattr(aiohttp, 'streams') and hasattr(aiohttp.streams, 'StreamReader'):
+    _original_stream_reader_init = aiohttp.streams.StreamReader.__init__
+
+    def _patched_stream_reader_init(self, protocol, limit, *args, **kwargs):
+        # Force limit to 100MB regardless of what is passed
+        new_limit = 100 * 1024 * 1024
+        _original_stream_reader_init(self, protocol, new_limit, *args, **kwargs)
+
+    aiohttp.streams.StreamReader.__init__ = _patched_stream_reader_init
+    print(f"INFO: Successfully patched aiohttp.streams.StreamReader to enforce 100MB limit.")
+else:
+    print("WARNING: Could not patch aiohttp.streams.StreamReader. Large images might fail.")
 
 # Local module imports
 from auth import get_api_key # Potentially for root endpoint

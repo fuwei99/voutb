@@ -215,7 +215,7 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
                 current_gen_config_dict = attempt["config_modifier"](gen_config_dict.copy())
                 try:
                     # Pass is_auto_attempt=True for auto-mode calls
-                    result = await execute_gemini_call(client_to_use, attempt["model"], attempt["prompt_func"], current_gen_config_dict, request, is_auto_attempt=True)
+                    result = await execute_gemini_call(client_to_use, attempt["model"], attempt["prompt_func"], current_gen_config_dict, request, is_auto_attempt=True, location_manager=location_manager_instance)
                     return result
                 except Exception as e_auto:
                     last_err = e_auto
@@ -283,7 +283,7 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
                     gen_config_dict["thinking_config"]["include_thoughts"] = False
 
             try:
-                response = await execute_gemini_call(client_to_use, base_model_name, current_prompt_func, gen_config_dict, request)
+                response = await execute_gemini_call(client_to_use, base_model_name, current_prompt_func, gen_config_dict, request, location_manager=location_manager_instance)
                 location_manager_instance.report_success()
                 return response
             except Exception as e_call:

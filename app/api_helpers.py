@@ -415,12 +415,13 @@ async def openai_fake_stream_generator(
 
 
 async def execute_gemini_call(
-    current_client: Any, 
-    model_to_call: str,  
-    prompt_func: Callable[[List[OpenAIMessage]], List[types.Content]], 
-    gen_config_dict: Dict[str, Any], 
-    request_obj: OpenAIRequest, 
-    is_auto_attempt: bool = False
+    current_client: Any,
+    model_to_call: str,
+    prompt_func: Callable[[List[OpenAIMessage]], List[types.Content]],
+    gen_config_dict: Dict[str, Any],
+    request_obj: OpenAIRequest,
+    is_auto_attempt: bool = False,
+    location_manager: Any = None
 ):
     actual_prompt_for_call = prompt_func(request_obj.messages)
     client_model_name_for_log = getattr(current_client, 'model_name', 'unknown_direct_client_object')
@@ -440,7 +441,7 @@ async def execute_gemini_call(
             async def _gemini_real_stream_generator_inner():
                 try:
                     stream_gen_obj = await current_client.aio.models.generate_content_stream(
-                        model=model_to_call, 
+                        model=model_to_call,
                         contents=actual_prompt_for_call,
                         config=gen_config_dict # Pass the dictionary directly
                     )
@@ -448,6 +449,10 @@ async def execute_gemini_call(
                         yield convert_chunk_to_openai(chunk_item_call, request_obj.model, response_id_for_stream, 0)
                     yield "data: [DONE]\n\n"
                 except Exception as e_stream_call:
+                    err_str = str(e_stream_call)
+                    if location_manager and ("429" in err_str or "ResourceExhausted" in err_str):
+                        location_manager.report_error(429)
+                    
                     err_msg_detail_stream = f"Streaming Error (Gemini API, model string: '{model_to_call}'): {type(e_stream_call).__name__} - {str(e_stream_call)}"
                     print(f"ERROR: {err_msg_detail_stream}")
                     s_err = str(e_stream_call); s_err = s_err[:1024]+"..." if len(s_err)>1024 else s_err
@@ -456,14 +461,22 @@ async def execute_gemini_call(
                     if not is_auto_attempt:
                         yield f"data: {j_err}\n\n"
                         yield "data: [DONE]\n\n"
-                    raise e_stream_call
+                    else:
+                        # Only raise if it's an internal auto-attempt that needs to be caught by the caller
+                        raise e_stream_call
             return StreamingResponse(_gemini_real_stream_generator_inner(), media_type="text/event-stream")
     else: # Non-streaming
-        response_obj_call = await current_client.aio.models.generate_content(
-            model=model_to_call, 
-            contents=actual_prompt_for_call,
-            config=gen_config_dict # Pass the dictionary directly
-        )
+        try:
+            response_obj_call = await current_client.aio.models.generate_content(
+                model=model_to_call,
+                contents=actual_prompt_for_call,
+                config=gen_config_dict # Pass the dictionary directly
+            )
+        except Exception as e_non_stream:
+            err_str = str(e_non_stream)
+            if location_manager and ("429" in err_str or "ResourceExhausted" in err_str):
+                location_manager.report_error(429)
+            raise e_non_stream
         if hasattr(response_obj_call, 'prompt_feedback') and \
            hasattr(response_obj_call.prompt_feedback, 'block_reason') and \
            response_obj_call.prompt_feedback.block_reason:
