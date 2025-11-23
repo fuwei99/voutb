@@ -2,7 +2,7 @@ import json
 import time
 import math
 import asyncio
-from typing import List, Dict, Any, Callable, Union, Optional
+from typing import List, Dict, Any, Callable, Union, Optional, Awaitable
 
 from fastapi.responses import JSONResponse, StreamingResponse
 from google.auth.transport.requests import Request as AuthRequest
@@ -417,13 +417,13 @@ async def openai_fake_stream_generator(
 async def execute_gemini_call(
     current_client: Any,
     model_to_call: str,
-    prompt_func: Callable[[List[OpenAIMessage]], List[types.Content]],
+    prompt_func: Callable[[List[OpenAIMessage]], Awaitable[List[types.Content]]],
     gen_config_dict: Dict[str, Any],
     request_obj: OpenAIRequest,
     is_auto_attempt: bool = False,
     location_manager: Any = None
 ):
-    actual_prompt_for_call = prompt_func(request_obj.messages)
+    actual_prompt_for_call = await prompt_func(request_obj.messages)
     client_model_name_for_log = getattr(current_client, 'model_name', 'unknown_direct_client_object')
     print(f"INFO: execute_gemini_call for requested API model '{model_to_call}', using client object with internal name '{client_model_name_for_log}'. Original request model: '{request_obj.model}'")
     
