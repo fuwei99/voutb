@@ -20,22 +20,5 @@
     "europe-west9",
     "europe-west12",
     "europe-central2",
-    "europe-west6",
-    "us-east5",
-    "us-south1",
-    "us-central1",
-    "us-west4",
-    "us-west2",
-    "us-east1",
-    "us-east4",
-    "us-west1",
-    "us-west3",
-    "northamerica-northeast1",
-    "northamerica-northeast2",
-    "africa-south1",
-    "me-central2",
-    "me-central1",
-    "me-west1",
-    "southamerica-west1",
-    "southamerica-east1"
+    "europe-west6"
 ]
