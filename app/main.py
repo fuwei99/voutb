@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends # Depends might be used by root endpoint
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 import aiohttp
 
@@ -80,7 +81,4 @@ async def startup_event():
 
 @app.get("/")
 async def root():
-    return {
-        "status": "ok",
-        "message": "OpenAI to Gemini Adapter is running."
-    }
+    return RedirectResponse(url="/admin")
