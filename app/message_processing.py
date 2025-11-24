@@ -84,9 +84,7 @@ async def _extract_markdown_images_to_parts(text: str) -> Tuple[List[types.Part]
         # Reverse parts list since we processed matches in reverse
         parts.reverse()
     
-    # Clean up any extra whitespace that might be left
-    remaining_text = re.sub(r'\s+', ' ', remaining_text).strip()
-    
+    # Return parts and remaining text as is (no stripping)
     return parts, remaining_text
 
 def _inject_previous_images_into_user_message(messages: List[OpenAIMessage]) -> List[OpenAIMessage]:
