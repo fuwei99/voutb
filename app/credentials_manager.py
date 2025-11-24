@@ -72,9 +72,8 @@ def _refresh_auth(credentials):
 
 # Credential Manager for handling multiple service accounts
 class CredentialManager:
-    def __init__(self): # default_credentials_dir is now handled by config
-        # Use CREDENTIALS_DIR from config
-        self.credentials_dir = app_config.CREDENTIALS_DIR
+    def __init__(self): 
+        # Use CREDENTIALS_DIR from config (dynamically)
         self.credentials_files = []
         self.current_index = 0
         self.credentials = None
@@ -84,6 +83,10 @@ class CredentialManager:
         # Round-robin index for tracking position
         self.round_robin_index = 0
         self.load_credentials_list() # Load file-based credentials initially
+
+    @property
+    def credentials_dir(self):
+        return app_config.CREDENTIALS_DIR
 
     def add_credential_from_json(self, credentials_info: Dict[str, Any]) -> bool:
         """

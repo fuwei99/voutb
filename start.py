@@ -15,17 +15,17 @@ try:
     if env_file.exists():
         print(f"📄 加载环境变量文件: {env_file}")
         load_dotenv(env_file, override=False)
-        print("✓ 环境变量加载完成\n")
+        print("[OK] 环境变量加载完成\n")
     else:
-        print(f"⚠️  未找到 .env 文件: {env_file}")
+        print(f"[WARN]  未找到 .env 文件: {env_file}")
         print("将使用系统环境变量或默认值\n")
 except ImportError:
-    print("⚠️  未安装 python-dotenv，使用手动加载方式")
+    print("[WARN]  未安装 python-dotenv，使用手动加载方式")
     print("建议运行: pip install python-dotenv\n")
     # 手动加载 .env 文件
     env_file = Path(__file__).parent / ".env"
     if env_file.exists():
-        print(f"📄 手动加载环境变量文件: {env_file}")
+        print(f"[INFO] 手动加载环境变量文件: {env_file}")
         with open(env_file, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
@@ -45,9 +45,9 @@ except ImportError:
                     # 只在环境变量未设置时才设置
                     if key and not os.environ.get(key):
                         os.environ[key] = value
-        print("✓ 环境变量加载完成\n")
+        print("[OK] 环境变量加载完成\n")
     else:
-        print(f"⚠️  未找到 .env 文件: {env_file}")
+        print(f"[WARN]  未找到 .env 文件: {env_file}")
         print("将使用系统环境变量或默认值\n")
 
 # 添加app目录到Python路径
@@ -66,9 +66,9 @@ def check_environment():
     # 检查API_KEY
     api_key = app_config.API_KEY
     if not api_key or api_key == "123456":
-        print("⚠️  警告: API_KEY 未设置或为默认值 '123456'")
+        print("[WARN]  警告: API_KEY 未设置或为默认值 '123456'")
     else:
-        print(f"✓ API_KEY: {'*' * len(api_key)}")
+        print(f"[OK] API_KEY: {'*' * len(api_key)}")
     
     # 检查认证方式
     auth_methods = []
@@ -77,12 +77,12 @@ def check_environment():
     vertex_keys = app_config.VERTEX_EXPRESS_API_KEY_VAL
     if vertex_keys:
         auth_methods.append(f"Vertex Express API Key ({len(vertex_keys)}个)")
-        print(f"✓ VERTEX_EXPRESS_API_KEY: {len(vertex_keys)}个密钥")
+        print(f"[OK] VERTEX_EXPRESS_API_KEY: {len(vertex_keys)}个密钥")
     
     google_creds_json = app_config.GOOGLE_CREDENTIALS_JSON_STR
     if google_creds_json:
         auth_methods.append("Google服务账号JSON")
-        print("✓ GOOGLE_CREDENTIALS_JSON: 已设置")
+        print("[OK] GOOGLE_CREDENTIALS_JSON: 已设置")
     
     creds_dir = app_config.CREDENTIALS_DIR
     creds_path = Path(creds_dir)
@@ -90,10 +90,10 @@ def check_environment():
         json_files = list(creds_path.glob("*.json"))
         if json_files:
             auth_methods.append(f"服务账号文件 ({len(json_files)}个)")
-            print(f"✓ CREDENTIALS_DIR: {creds_dir} ({len(json_files)}个JSON文件)")
+            print(f"[OK] CREDENTIALS_DIR: {creds_dir} ({len(json_files)}个JSON文件)")
     
     if not auth_methods:
-        print("\n❌ 错误: 未配置任何认证方式！")
+        print("\n[ERROR] 错误: 未配置任何认证方式！")
         print("请至少配置以下之一:")
         print("  1. VERTEX_EXPRESS_API_KEY")
         print("  2. GOOGLE_CREDENTIALS_JSON")
@@ -101,7 +101,7 @@ def check_environment():
         print("\n请参考 .env.example 文件配置环境变量")
         return False
     
-    print(f"\n✓ 认证方式: {', '.join(auth_methods)}")
+    print(f"\n[OK] 认证方式: {', '.join(auth_methods)}")
     
     # 显示可选配置
     print("\n可选配置:")
@@ -127,7 +127,7 @@ def check_environment():
 
 def main():
     """主函数"""
-    print("\n🚀 OpenAI to Gemini Adapter 启动中...\n")
+    print("\n[INFO] OpenAI to Gemini Adapter 启动中...\n")
     
     # 检查环境
     if not check_environment():
@@ -150,9 +150,9 @@ def main():
             log_level="info"
         )
     except KeyboardInterrupt:
-        print("\n\n👋 服务已停止")
+        print("\n\n[INFO] 服务已停止")
     except Exception as e:
-        print(f"\n❌ 启动失败: {e}")
+        print(f"\n[ERROR] 启动失败: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

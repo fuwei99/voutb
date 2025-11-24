@@ -8,12 +8,22 @@ class LocationManager:
         self.locations: List[str] = []
         self.current_location_index: int = 0
         self.consecutive_429_count: int = 0
-        self.auto_switch_enabled: bool = app_config.AUTO_SWITCH_LOCATION
-        self.max_retries_before_switch: int = app_config.MAX_RETRIES_BEFORE_SWITCH
-        self.default_location: str = app_config.DEFAULT_LOCATION
+        # Remove local caching of config values
         
         self._load_locations()
         self._set_initial_location()
+
+    @property
+    def auto_switch_enabled(self) -> bool:
+        return app_config.AUTO_SWITCH_LOCATION
+
+    @property
+    def max_retries_before_switch(self) -> int:
+        return app_config.MAX_RETRIES_BEFORE_SWITCH
+
+    @property
+    def default_location(self) -> str:
+        return app_config.DEFAULT_LOCATION
 
     def _load_locations(self):
         """Load locations from locations.json"""

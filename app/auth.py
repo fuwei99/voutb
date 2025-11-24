@@ -1,7 +1,7 @@
 from fastapi import HTTPException, Header, Depends
 from fastapi.security import APIKeyHeader
 from typing import Optional
-from config import API_KEY, HUGGINGFACE_API_KEY, HUGGINGFACE # Import API_KEY, HUGGINGFACE_API_KEY, HUGGINGFACE
+import config as app_config # Import config module dynamically
 import os
 import json
 import base64
@@ -11,11 +11,12 @@ def validate_api_key(api_key_to_validate: str) -> bool:
     """
     Validate the provided API key against the configured key.
     """
-    if not API_KEY: # API_KEY is imported from config
+    current_api_key = app_config.API_KEY
+    if not current_api_key:
         # If no API key is configured, authentication is disabled (or treat as invalid)
         # Depending on desired behavior, for now, let's assume if API_KEY is not set, all keys are invalid unless it's an empty string match
         return False # Or True if you want to disable auth when API_KEY is not set
-    return api_key_to_validate == API_KEY
+    return api_key_to_validate == current_api_key
 
 # API Key security scheme
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
@@ -26,7 +27,7 @@ async def get_api_key(
     x_ip_token: Optional[str] = Header(None, alias="x-ip-token")
 ):
     # Check if Hugging Face auth is enabled
-    if HUGGINGFACE:  # Use HUGGINGFACE from config
+    if app_config.HUGGINGFACE:  # Use HUGGINGFACE from config dynamically
         if x_ip_token is None:
             raise HTTPException(
                 status_code=401, # Unauthorised - because x-ip-token is missing
@@ -64,7 +65,7 @@ async def get_api_key(
         elif error_in_token is None:  # JSON 'null' is Python's None
             # If error is null, auth is successful. Now check if HUGGINGFACE_API_KEY is configured.
             print(f"HuggingFace authentication successful via x-ip-token (error field was null).")
-            return HUGGINGFACE_API_KEY # Return the configured HUGGINGFACE_API_KEY
+            return app_config.HUGGINGFACE_API_KEY # Return the configured HUGGINGFACE_API_KEY dynamically
         else:
             # Any other non-null, non-"InvalidAccessToken" value in 'error' field
             raise HTTPException(

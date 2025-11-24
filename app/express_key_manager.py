@@ -10,10 +10,14 @@ class ExpressKeyManager:
     """
     
     def __init__(self):
-        """Initialize the Express Key Manager with API keys from config."""
-        self.express_keys: List[str] = app_config.VERTEX_EXPRESS_API_KEY_VAL
+        """Initialize the Express Key Manager."""
         self.round_robin_index: int = 0
         
+    @property
+    def express_keys(self) -> List[str]:
+        """Dynamically get keys from config"""
+        return app_config.VERTEX_EXPRESS_API_KEY_VAL
+
     def get_total_keys(self) -> int:
         """Get the total number of available Express API keys."""
         return len(self.express_keys)
@@ -23,14 +27,15 @@ class ExpressKeyManager:
         Get a random Express API key.
         Returns (original_index, key) tuple or None if no keys available.
         """
-        if not self.express_keys:
+        keys = self.express_keys
+        if not keys:
             print("WARNING: No Express API keys available for selection.")
             return None
             
         print(f"DEBUG: Using random Express API key selection strategy.")
         
         # Create list of indexed keys
-        indexed_keys = list(enumerate(self.express_keys))
+        indexed_keys = list(enumerate(keys))
         # Shuffle to randomize order
         random.shuffle(indexed_keys)
         
@@ -43,22 +48,23 @@ class ExpressKeyManager:
         Get an Express API key using round-robin selection.
         Returns (original_index, key) tuple or None if no keys available.
         """
-        if not self.express_keys:
+        keys = self.express_keys
+        if not keys:
             print("WARNING: No Express API keys available for selection.")
             return None
             
         print(f"DEBUG: Using round-robin Express API key selection strategy.")
         
         # Ensure round_robin_index is within bounds
-        if self.round_robin_index >= len(self.express_keys):
+        if self.round_robin_index >= len(keys):
             self.round_robin_index = 0
             
         # Get the key at current index
-        key = self.express_keys[self.round_robin_index]
+        key = keys[self.round_robin_index]
         original_idx = self.round_robin_index
         
         # Move to next index for next call
-        self.round_robin_index = (self.round_robin_index + 1) % len(self.express_keys)
+        self.round_robin_index = (self.round_robin_index + 1) % len(keys)
         
         return (original_idx, key)
     
@@ -83,11 +89,7 @@ class ExpressKeyManager:
     
     def refresh_keys(self):
         """
-        Refresh the Express API keys from config.
-        This allows for dynamic updates if the config is reloaded.
+        Legacy method kept for compatibility.
+        Keys are now refreshed automatically via property access.
         """
-        self.express_keys = app_config.VERTEX_EXPRESS_API_KEY_VAL
-        # Reset round-robin index if keys changed
-        if self.round_robin_index >= len(self.express_keys):
-            self.round_robin_index = 0
-        print(f"INFO: Express API keys refreshed. Total keys: {self.get_total_keys()}")
+        print(f"INFO: Express API keys refreshed (auto). Total keys: {self.get_total_keys()}")

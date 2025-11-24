@@ -1,83 +1,114 @@
 import os
 import json
+import time
 
-# Load config.json if it exists
-# Get the directory where config.py is located
+# Config file path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 
-config_data = {}
-if os.path.exists(CONFIG_FILE):
-    try:
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            config_data = json.load(f)
-        print(f"Loaded configuration from {CONFIG_FILE}")
-    except Exception as e:
-        print(f"Warning: Error loading config.json: {e}")
+class ConfigLoader:
+    def __init__(self):
+        self._cache = {}
+        self._last_mtime = 0
+        self.config_file = CONFIG_FILE
 
-def get_conf(key, default=None):
-    """Get configuration from config.json or environment variables."""
-    # Priority: config.json > environment variable > default
-    val = config_data.get(key)
-    if val is not None:
+    def _reload_if_needed(self):
+        try:
+            if not os.path.exists(self.config_file):
+                return
+
+            current_mtime = os.stat(self.config_file).st_mtime
+            if current_mtime > self._last_mtime:
+                # File changed, reload
+                print(f"DEBUG: Reloading configuration from {self.config_file}")
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    self._cache = json.load(f)
+                self._last_mtime = current_mtime
+        except Exception as e:
+            print(f"ERROR: Failed to reload config: {e}")
+
+    def get(self, key, default=None):
+        self._reload_if_needed()
+        val = self._cache.get(key)
+        if val is not None:
+            return val
+        return default
+
+    def get_bool(self, key, default=False):
+        val = self.get(key)
+        if val is None:
+            return default
         if isinstance(val, bool):
-            return "true" if val else "false"
-        return str(val)
-    return os.environ.get(key, default)
+            return val
+        return str(val).lower() == "true"
 
-# Default password if not set in environment
-DEFAULT_PASSWORD = "123456"
+    def get_int(self, key, default=0):
+        val = self.get(key)
+        try:
+            return int(val)
+        except (TypeError, ValueError):
+            return default
+            
+    def get_float(self, key, default=0.0):
+        val = self.get(key)
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return default
 
-# Get password from environment variable or use default
-API_KEY = get_conf("API_KEY", DEFAULT_PASSWORD)
+_loader = ConfigLoader()
 
-# HuggingFace Authentication Settings
-HUGGINGFACE = get_conf("HUGGINGFACE", "false").lower() == "true"
-HUGGINGFACE_API_KEY = get_conf("HUGGINGFACE_API_KEY", "") # Default to empty string, auth logic will verify if HF_MODE is true and this key is needed
+# Default values mapping
+DEFAULTS = {
+    "API_KEY": "123456",
+    "CREDENTIALS_DIR": "/app/credentials",
+    "MODELS_CONFIG_URL": "https://raw.githubusercontent.com/gzzhongqi/vertex2openai/refs/heads/main/vertexModels.json",
+    "FAKE_STREAMING_INTERVAL": 1.0,
+    "MAX_RETRIES_BEFORE_SWITCH": 1,
+    "DEFAULT_LOCATION": "asia-southeast1"
+}
 
-# Directory for service account credential files
-CREDENTIALS_DIR = get_conf("CREDENTIALS_DIR", "/app/credentials")
+def __getattr__(name):
+    # Dynamic property access
+    if name == "VERTEX_REASONING_TAG":
+        return "vertex_think_tag"
+    
+    if name == "VERTEX_EXPRESS_API_KEY_VAL":
+        raw_keys = _loader.get("VERTEX_EXPRESS_API_KEY", "")
+        if isinstance(raw_keys, str):
+            return [key.strip() for key in raw_keys.split(',') if key.strip()]
+        return []
 
-# JSON string for service account credentials (can be one or multiple comma-separated)
-GOOGLE_CREDENTIALS_JSON_STR = get_conf("GOOGLE_CREDENTIALS_JSON")
+    # Handle simple mappings
+    # Map legacy variable names to JSON keys if they are identical
+    # Special handling for boolean conversions based on variable naming conventions or explicit lists
+    
+    bool_keys = [
+        "HUGGINGFACE", "FAKE_STREAMING_ENABLED", "ROUNDROBIN", 
+        "SAFETY_SCORE", "R2_ENABLED", "AUTO_SWITCH_LOCATION"
+    ]
+    
+    # Mapping from variable name to JSON key (if different)
+    key_map = {
+        "GOOGLE_CREDENTIALS_JSON_STR": "GOOGLE_CREDENTIALS_JSON",
+        "FAKE_STREAMING_ENABLED": "FAKE_STREAMING",
+        "FAKE_STREAMING_INTERVAL_SECONDS": "FAKE_STREAMING_INTERVAL"
+    }
+    
+    json_key = key_map.get(name, name)
+    
+    if name in bool_keys or json_key in bool_keys:
+        # It's a boolean config
+        return _loader.get_bool(json_key, False)
+    
+    if name == "FAKE_STREAMING_INTERVAL_SECONDS":
+        return _loader.get_float(json_key, 1.0)
+        
+    if name == "MAX_RETRIES_BEFORE_SWITCH":
+        return _loader.get_int(json_key, 1)
 
-# API Key for Vertex Express Mode
-raw_vertex_keys = get_conf("VERTEX_EXPRESS_API_KEY")
-if raw_vertex_keys:
-    VERTEX_EXPRESS_API_KEY_VAL = [key.strip() for key in raw_vertex_keys.split(',') if key.strip()]
-else:
-    VERTEX_EXPRESS_API_KEY_VAL = []
+    # Default string/generic getter
+    return _loader.get(json_key, DEFAULTS.get(name))
 
-# Fake streaming settings for debugging/testing
-FAKE_STREAMING_ENABLED = get_conf("FAKE_STREAMING", "false").lower() == "true"
-FAKE_STREAMING_INTERVAL_SECONDS = float(get_conf("FAKE_STREAMING_INTERVAL", "1.0"))
-
-# URL for the remote JSON file containing model lists
-MODELS_CONFIG_URL = get_conf("MODELS_CONFIG_URL", "https://raw.githubusercontent.com/gzzhongqi/vertex2openai/refs/heads/main/vertexModels.json")
-
-# Constant for the Vertex reasoning tag
-VERTEX_REASONING_TAG = "vertex_think_tag"
-
-# Round-robin credential selection strategy
-ROUNDROBIN = get_conf("ROUNDROBIN", "false").lower() == "true"
-
-# Safety score display setting
-SAFETY_SCORE = get_conf("SAFETY_SCORE", "false").lower() == "true"
-# Validation logic moved to app/auth.py
-
-# Proxy settings
-PROXY_URL = get_conf("PROXY_URL")
-SSL_CERT_FILE = get_conf("SSL_CERT_FILE")
-
-# Cloudflare R2 Image Storage Settings
-R2_ENABLED = get_conf("R2_ENABLED", "false").lower() == "true"
-R2_ACCOUNT_ID = get_conf("R2_ACCOUNT_ID", "")
-R2_ACCESS_KEY_ID = get_conf("R2_ACCESS_KEY_ID", "")
-R2_SECRET_ACCESS_KEY = get_conf("R2_SECRET_ACCESS_KEY", "")
-R2_BUCKET_NAME = get_conf("R2_BUCKET_NAME", "")
-R2_PUBLIC_URL = get_conf("R2_PUBLIC_URL", "")  # e.g., https://your-bucket.r2.dev
-
-# Location Switching Settings
-AUTO_SWITCH_LOCATION = get_conf("AUTO_SWITCH_LOCATION", "true").lower() == "true"
-MAX_RETRIES_BEFORE_SWITCH = int(get_conf("MAX_RETRIES_BEFORE_SWITCH", "1"))
-DEFAULT_LOCATION = get_conf("DEFAULT_LOCATION", "asia-southeast1")
+# Expose these for explicit imports if needed, though __getattr__ handles them
+# We don't define them here to force __getattr__ to be called

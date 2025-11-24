@@ -241,20 +241,21 @@ async def update_config(request: Request, data: ConfigUpdate):
         if hasattr(request.app.state, 'location_manager'):
             lm = request.app.state.location_manager
             
-            # Update auto-switch setting
-            if 'AUTO_SWITCH_LOCATION' in new_config:
-                lm.auto_switch_enabled = bool(new_config['AUTO_SWITCH_LOCATION'])
+            # Since properties are now dynamic, we don't set them manually.
+            # But we might want to reset the current index if the default changed
+            # and we are currently using the old default (or just force a switch).
             
-            # Update current location if DEFAULT_LOCATION changed
             if 'DEFAULT_LOCATION' in new_config:
                 new_default = new_config['DEFAULT_LOCATION']
-                lm.default_location = new_default
-                # Try to switch to the new default immediately
+                # lm.default_location is now a read-only property, so we don't set it.
+                # But we can update the current index if needed.
                 if new_default in lm.locations:
+                    # Only switch if the current location index was pointing to something else
+                    # or just force it to the new default.
                     lm.current_location_index = lm.locations.index(new_default)
                     print(f"INFO: Admin updated location settings. Current location switched to: {new_default}")
 
-        return {"status": "success", "message": "Config updated. Location settings applied immediately."}
+        return {"status": "success", "message": "Config updated. Settings applied immediately."}
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON format")
     except Exception as e:
