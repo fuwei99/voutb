@@ -31,5 +31,11 @@
     "us-west1",
     "us-west3",
     "northamerica-northeast1",
-    "northamerica-northeast2"
+    "northamerica-northeast2",
+    "africa-south1",
+    "me-central2",
+    "me-central1",
+    "me-west1",
+    "southamerica-west1",
+    "southamerica-east1"
 ]

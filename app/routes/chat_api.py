@@ -168,7 +168,8 @@ async def chat_completions(fastapi_request: Request, request: OpenAIRequest, api
                             print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode with custom base URL for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
                         else:
                             client_to_use = genai.Client(vertexai=True, api_key=key_val)
-                            print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode SDK for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}).")
+                            current_location = location_manager_instance.get_current_location()
+                            print(f"INFO: Attempt {attempt+1}/{total_keys} - Using voutb Express Mode SDK for model {request.model} (base: {base_model_name}) with API key (original index: {original_idx}) in location {current_location}.")
                         break # Successfully initialized client
                     except Exception as e:
                         print(f"WARNING: Attempt {attempt+1}/{total_keys} - voutb Express Mode client init failed for API key (original index: {original_idx}) for model {request.model}: {e}. Trying next key.")

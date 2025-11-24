@@ -28,6 +28,7 @@ from vertex_ai_init import init_vertex_ai
 # Routers
 from routes import models_api
 from routes import chat_api
+from routes import admin_api
 
 app = FastAPI(title="OpenAI to Gemini Adapter")
 
@@ -49,8 +50,9 @@ location_manager = LocationManager()
 app.state.location_manager = location_manager # Store location manager on app state
 
 # Include API routers
-app.include_router(models_api.router) 
+app.include_router(models_api.router)
 app.include_router(chat_api.router)
+app.include_router(admin_api.router)
 
 @app.on_event("startup")
 async def startup_event():
