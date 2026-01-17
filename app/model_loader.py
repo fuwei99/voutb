@@ -21,7 +21,17 @@ async def fetch_and_parse_models_config() -> Optional[Dict[str, List[str]]]:
 
     print(f"Fetching model configuration from: {app_config.MODELS_CONFIG_URL}")
     try:
-        async with httpx.AsyncClient() as client:
+        proxies = None
+        if app_config.PROXY_URL:
+             # httpx accepts specific dict or string. Logic similar to openai_handler
+             if app_config.PROXY_URL.startswith("socks"):
+                 proxies = {"all://": app_config.PROXY_URL}
+             else:
+                 proxies = {"https://": app_config.PROXY_URL, "http://": app_config.PROXY_URL}
+
+        verify_ssl = app_config.SSL_CERT_FILE if app_config.SSL_CERT_FILE else True
+
+        async with httpx.AsyncClient(proxies=proxies, verify=verify_ssl, timeout=30.0) as client:
             response = await client.get(app_config.MODELS_CONFIG_URL)
             response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
             data = response.json()

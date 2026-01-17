@@ -15,7 +15,7 @@ from model_loader import refresh_models_config_cache # Import new model loader f
 
 def _get_http_options() -> Optional[types.HttpOptions]:
     """Get http options from config."""
-    if app_config.PROXY_URL and app_config.PROXY_URL.startswith("socks"):
+    if app_config.PROXY_URL:
         return types.HttpOptions(
             client_args={'proxy': app_config.PROXY_URL},
             async_client_args={'proxy': app_config.PROXY_URL},

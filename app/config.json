@@ -9,5 +9,6 @@
     "R2_PUBLIC_URL": "",
     "AUTO_SWITCH_LOCATION": false,
     "MAX_RETRIES_BEFORE_SWITCH": 1,
-    "DEFAULT_LOCATION": "asia-southeast2"
+    "DEFAULT_LOCATION": "asia-southeast2",
+    "PROXY_URL": ""
 }
